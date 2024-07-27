@@ -1,0 +1,5 @@
+*.exe
+imgui.ini
+libs/*
+libs
+SDL2.dll
