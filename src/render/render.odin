@@ -15,18 +15,21 @@ Mouse :: struct {
 	canDrag: bool,
 }
 
+Modes :: enum{Mandelbrot, View, Julia}
+
 Camera :: struct {
 	position: Vec2,
 	zoom: f32,
     width: i32,
     height: i32,
+	mode: Modes
 }
 
 shaderProgram: u32
 VAO, VBO: u32
 
 mouse := Mouse{{0, 0}, {0, 0}, {0, 0}, false}
-camera := Camera{{0, 0}, 184, 0, 0}
+camera := Camera{{0, 0}, 184, 0, 0, Modes.Mandelbrot}
 
 init :: proc(width: i32, height: i32) {
 	gl.load_up_to(3, 2, proc(p: rawptr, name: cstring) {
@@ -82,6 +85,26 @@ loop :: proc() {
 	gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 }
 
+convertGrid :: proc(vec: Vec2) -> Vec2 {
+	return (vec + camera.position - {f32(camera.width), f32(camera.height)} / 2) / camera.zoom
+}
+
+changeMode :: proc(toMode: Modes) {
+	camera.mode = toMode
+	vertexLocation := gl.GetUniformLocation(shaderProgram, "iMode")
+	gl.Uniform1i(vertexLocation, i32(toMode))
+}
+
+reset :: proc() {
+	camera.zoom = 184
+	camera.position = {0, 0}
+
+	vertexLocation := gl.GetUniformLocation(shaderProgram, "iMove")
+	gl.Uniform2f(vertexLocation, -camera.position[0], camera.position[1])
+	vertexLocation = gl.GetUniformLocation(shaderProgram, "iZoom")
+	gl.Uniform1f(vertexLocation, f32(1 / camera.zoom))
+}
+
 resize :: proc(width: i32, height: i32) {
 	camera.width = width
 	camera.height = height
@@ -98,6 +121,12 @@ move :: proc(x: i32, y: i32) {
 
 		vertexLocation := gl.GetUniformLocation(shaderProgram, "iMove")
 		gl.Uniform2f(vertexLocation, -camera.position[0], camera.position[1])
+	}
+	
+	if (camera.mode == .View) {
+		vertexLocation := gl.GetUniformLocation(shaderProgram, "iMouse");
+		position := convertGrid(mouse.position)
+		gl.Uniform2f(vertexLocation, position[0], position[1])
 	}
 }
 
@@ -121,6 +150,13 @@ buttonPress :: proc(button: u8) {
 		mouse.target = mouse.position
 		mouse.wherePressed = camera.position
 		mouse.canDrag = true
+	} else if button == 3 {
+		if camera.mode == .Mandelbrot {
+			changeMode(.View)
+		} else {
+			changeMode(.Mandelbrot)
+			reset()
+		}
 	}
 }
 
@@ -128,7 +164,12 @@ buttonRelease :: proc(button: u8) {
 	if button == 1 {
 		mouse.canDrag = false
 	} else if button == 2 {
-		camera.zoom = 184
-		camera.position = {0, 0}
+		reset()
+	} else if button == 3 && camera.mode == .View {
+		changeMode(.Julia)
+		vertexLocation := gl.GetUniformLocation(shaderProgram, "iPosition")
+		position := convertGrid(mouse.position)
+		gl.Uniform2f(vertexLocation, position[0], position[1])
+		reset()
 	}
 }
