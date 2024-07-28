@@ -15,7 +15,7 @@ main :: proc() {
 	windowWidth: i32 = 1000
 	windowHeight: i32 = 700
 
-	lastTimeTicks := time.tick_now();
+	lastTimeTicks := time.tick_now()
 	nbFrames := 0
 	fps := 0
 
@@ -110,8 +110,8 @@ main :: proc() {
 
 		nbFrames += 1
 		if time.duration_seconds(time.tick_since(lastTimeTicks)) >= 1.0 {
-			fps = nbFrames;
-			nbFrames = 0;
+			fps = nbFrames
+			nbFrames = 0
 			lastTimeTicks = time.tick_now()
 		}
 
