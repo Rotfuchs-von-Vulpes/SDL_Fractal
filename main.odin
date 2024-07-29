@@ -8,8 +8,11 @@ import "core:fmt"
 import "core:time"
 import math "core:math/linalg"
 import sdl "vendor:sdl2"
+import stb "vendor:stb/image"
 
 import "src/render"
+
+icon_raw :: #load("assets/icon.png")
 
 main :: proc() {
 	windowWidth: i32 = 1000
@@ -22,19 +25,27 @@ main :: proc() {
 	assert(sdl.Init(sdl.INIT_EVERYTHING) == 0)
 	defer sdl.Quit()
 
+	width, height, channels: i32
+	iconPixels := stb.load_from_memory(raw_data(icon_raw), cast(i32) len(icon_raw), &width, &height, &channels, 4)
+	iconSurface := sdl.CreateRGBSurfaceWithFormatFrom(iconPixels, width, height, 1, width * 4, cast(u32) sdl.PixelFormatEnum.RGBA8888)
+
 	sdl.GL_SetAttribute(.CONTEXT_FLAGS, i32(sdl.GLcontextFlag.FORWARD_COMPATIBLE_FLAG))
 	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, i32(sdl.GLprofile.CORE))
 	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
 	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 2)
 
 	window := sdl.CreateWindow(
-		"Dear ImGui SDL2+OpenGl3 example",
+		"Fractal vizualizer",
 		sdl.WINDOWPOS_CENTERED,
 		sdl.WINDOWPOS_CENTERED,
 		windowWidth, windowHeight,
 		{.OPENGL, .RESIZABLE, .ALLOW_HIGHDPI})
 	assert(window != nil)
 	defer sdl.DestroyWindow(window)
+
+	sdl.SetWindowIcon(window, iconSurface) 
+
+	//icon: ^sdl.Surface = sdl_image.Load("assets/icon.png")
 
 	gl_ctx := sdl.GL_CreateContext(window)
 	defer sdl.GL_DeleteContext(gl_ctx)
@@ -57,7 +68,7 @@ main :: proc() {
 		style.Colors[im.Col.WindowBg].w =1
 	}
 
-	im.StyleColorsDark()
+	im.StyleColorsClassic()
 
 	imgui_impl_sdl2.InitForOpenGL(window, gl_ctx)
 	defer imgui_impl_sdl2.Shutdown()
@@ -70,7 +81,7 @@ main :: proc() {
 		for sdl.PollEvent(&e) {
 			imgui_impl_sdl2.ProcessEvent(&e)
 			
-			if io.WantCaptureMouse {break}
+			//if io.WantCaptureMouse {break}
 
 			#partial switch e.type {
 				case .WINDOWEVENT:  #partial switch e.window.event {
@@ -95,11 +106,13 @@ main :: proc() {
 
 		// im.ShowDemoWindow(nil)
 
-		if im.Begin("Window containing a quit button") {
+		viewport := im.GetMainViewport();
+		im.SetNextWindowPos(viewport.WorkPos);
+		im.SetNextWindowSize(viewport.WorkSize);
+		if im.Begin("Window containing a quit button", flags = im.WindowFlags_NoDecoration + {.NoMove, .NoBackground}) {
 			im.Text("FPS: %d", fps)
-			if im.Button("The quit button in question") {
-				running = false
-			}
+			r, i := render.getCenterPostion()
+			im.Text("Position in the center: %f %c %fi", r, i > 0 ? '-' : '+', math.abs(i))
 		}
 		im.End()
 

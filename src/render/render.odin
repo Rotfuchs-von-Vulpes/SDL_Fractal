@@ -173,3 +173,9 @@ buttonRelease :: proc(button: u8) {
 		reset()
 	}
 }
+
+getCenterPostion :: proc() -> (f32, f32) {
+	vec := camera.position / camera.zoom
+
+	return vec[0], vec[1]
+}
