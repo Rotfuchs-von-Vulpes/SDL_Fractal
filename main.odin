@@ -31,8 +31,8 @@ main :: proc() {
 
 	sdl.GL_SetAttribute(.CONTEXT_FLAGS, i32(sdl.GLcontextFlag.FORWARD_COMPATIBLE_FLAG))
 	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, i32(sdl.GLprofile.CORE))
-	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
-	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 2)
+	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 4)
+	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 6)
 
 	window := sdl.CreateWindow(
 		"Fractal vizualizer",

@@ -6,11 +6,20 @@ import math "core:math/linalg"
 import sdl "vendor:sdl2"
 import gl "vendor:OpenGL"
 
+dVec2 :: [2]f64
 Vec2 :: [2]f32
+
+toDouble :: proc(a: Vec2) -> dVec2 {
+	return dVec2{f64(a[0]), f64(a[1])}
+}
+
+toFloat :: proc(a: dVec2) -> Vec2 {
+	return Vec2{f32(a[0]), f32(a[1])}
+}
 
 Mouse :: struct {
 	position: Vec2,
-	wherePressed: Vec2,
+	wherePressed: dVec2,
 	target: Vec2,
 	canDrag: bool,
 }
@@ -18,8 +27,8 @@ Mouse :: struct {
 Modes :: enum{Mandelbrot, View, Julia}
 
 Camera :: struct {
-	position: Vec2,
-	zoom: f32,
+	position: dVec2,
+	zoom: f64,
     width: i32,
     height: i32,
 	mode: Modes
@@ -32,7 +41,7 @@ mouse := Mouse{{0, 0}, {0, 0}, {0, 0}, false}
 camera := Camera{{0, 0}, 184, 0, 0, Modes.Mandelbrot}
 
 init :: proc(width: i32, height: i32) {
-	gl.load_up_to(3, 2, proc(p: rawptr, name: cstring) {
+	gl.load_up_to(4, 6, proc(p: rawptr, name: cstring) {
 		(cast(^rawptr)p)^ = sdl.GL_GetProcAddress(name)
 	})
 
@@ -65,9 +74,9 @@ init :: proc(width: i32, height: i32) {
 
 	gl.UseProgram(shaderProgram)
 	vertexLocation := gl.GetUniformLocation(shaderProgram, "iMove")
-	gl.Uniform2f(vertexLocation, 0, 0)
+	gl.Uniform2d(vertexLocation, 0, 0)
 	vertexLocation = gl.GetUniformLocation(shaderProgram, "iZoom")
-	gl.Uniform1f(vertexLocation, f32(1 / camera.zoom))
+	gl.Uniform1d(vertexLocation, 1 / camera.zoom)
 	vertexLocation = gl.GetUniformLocation(shaderProgram, "iMouse")
 	gl.Uniform2f(vertexLocation, 0, 0)
 	vertexLocation = gl.GetUniformLocation(shaderProgram, "iScreen")
@@ -86,7 +95,7 @@ loop :: proc() {
 }
 
 convertGrid :: proc(vec: Vec2) -> Vec2 {
-	return (vec + camera.position - {f32(camera.width), f32(camera.height)} / 2) / camera.zoom
+	return (vec + toFloat(camera.position) - {f32(camera.width), f32(camera.height)} / 2) / f32(camera.zoom)
 }
 
 changeMode :: proc(toMode: Modes) {
@@ -100,9 +109,9 @@ reset :: proc() {
 	camera.position = {0, 0}
 
 	vertexLocation := gl.GetUniformLocation(shaderProgram, "iMove")
-	gl.Uniform2f(vertexLocation, -camera.position[0], camera.position[1])
+	gl.Uniform2d(vertexLocation, -camera.position[0], camera.position[1])
 	vertexLocation = gl.GetUniformLocation(shaderProgram, "iZoom")
-	gl.Uniform1f(vertexLocation, f32(1 / camera.zoom))
+	gl.Uniform1d(vertexLocation, 1 / camera.zoom)
 }
 
 resize :: proc(width: i32, height: i32) {
@@ -117,10 +126,10 @@ move :: proc(x: i32, y: i32) {
 	mouse.position = Vec2{f32(x), f32(y)}
 
 	if mouse.canDrag {
-		camera.position = mouse.target - mouse.position + mouse.wherePressed
+		camera.position = toDouble(mouse.target - mouse.position) + mouse.wherePressed
 
 		vertexLocation := gl.GetUniformLocation(shaderProgram, "iMove")
-		gl.Uniform2f(vertexLocation, -camera.position[0], camera.position[1])
+		gl.Uniform2d(vertexLocation, -camera.position[0], camera.position[1])
 	}
 	
 	if (camera.mode == .View) {
@@ -131,17 +140,17 @@ move :: proc(x: i32, y: i32) {
 }
 
 scroll :: proc(yoffset: i32) {
-	toZoom := camera.zoom * (0.5 * f32(yoffset) + 1)
+	toZoom := camera.zoom * (0.5 * f64(yoffset) + 1)
 	if toZoom > 0 {
-		screen: Vec2 = {f32(camera.width / 2), f32(camera.height / 2)}
-		camera.position = mouse.position + camera.position - screen
-		camera.position = camera.position * f32(toZoom / camera.zoom)
+		screen: dVec2 = {f64(camera.width / 2), f64(camera.height / 2)}
+		camera.position = toDouble(mouse.position) + camera.position - screen
+		camera.position = camera.position * toZoom / camera.zoom
 		camera.zoom = toZoom
 		
 		vertexLocation := gl.GetUniformLocation(shaderProgram, "iZoom")
-		gl.Uniform1f(vertexLocation, f32(1 / camera.zoom))
+		gl.Uniform1d(vertexLocation, 1 / camera.zoom)
 		vertexLocation = gl.GetUniformLocation(shaderProgram, "iMove")
-		gl.Uniform2f(vertexLocation, -camera.position[0], camera.position[1])
+		gl.Uniform2d(vertexLocation, -camera.position[0], camera.position[1])
 	}
 }
 
@@ -174,7 +183,7 @@ buttonRelease :: proc(button: u8) {
 	}
 }
 
-getCenterPostion :: proc() -> (f32, f32) {
+getCenterPostion :: proc() -> (f64, f64) {
 	vec := camera.position / camera.zoom
 
 	return vec[0], vec[1]
